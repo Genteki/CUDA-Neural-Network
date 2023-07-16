@@ -84,7 +84,7 @@ int gpu_sigmoid(const real* __restrict__ A, real* __restrict__ C, int M, int N=1
 __global__ void gpu_softmax_kernel(const real* __restrict__ A,
                                    real* __restrict__ C, int M, int N) {
     int col = threadIdx.x + blockIdx.x * blockDim.x;
-    real exp_sum;
+    real exp_sum = 0.0f;
     // softmax(xi) = exp(xi) / sum_i(exp(xi))
     if (col < N) {
         for (int row = 0; row < M; ++row) {
@@ -169,7 +169,6 @@ int gpu_add(const real* A, const real* B,
     int grid_x = (N + dim_block.x - 1) / dim_block.x;
     int grid_y = (M + dim_block.y - 1) / dim_block.y;
     dim3 dim_grid(grid_x, grid_y);
-    printf("M: %d, N: %d\n", M, N);
     gpu_add_kernel<<<dim_grid, dim_block>>>(A, B, C, alpha, beta, M, N);
     cudaDeviceSynchronize();
     cudaError_t error = cudaGetLastError();
@@ -299,7 +298,7 @@ __global__ void l2norm_kernel(const real* src, real* col_sum, int M, int N) {
     int col = threadIdx.x + blockIdx.x * blockDim.x;
     real s = 0.0f;
     if (col < N) {
-        for(int row = 0; row < N; ++row) {
+        for(int row = 0; row < M; ++row) {
             s += src[col * M + row] * src[col * M + row];
         }
         col_sum[col] = s;
@@ -315,7 +314,7 @@ real l2norm(const real* src, const int& M, const int& N) {
     real h_col_sum[N];
     cudaMalloc((void**) &d_col_sum, sizeof(real) * N);
     l2norm_kernel<<<dim_grid, dim_block>>>(src, d_col_sum, M, N);
-    cudaMemcpy(h_col_sum, d_col_sum, N, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_col_sum, d_col_sum, N * sizeof(real), cudaMemcpyDeviceToHost);
     for (int i = 0; i < N; ++i)
         l2sum += h_col_sum[i];
     cudaFree(d_col_sum);

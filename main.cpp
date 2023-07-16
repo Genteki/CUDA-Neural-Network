@@ -17,9 +17,9 @@
 #include "utils/tests.h"
 #include "utils/types.h"
 
-#define FILE_TRAIN_IMAGES "/data/train-images-idx3-ubyte"
-#define FILE_TRAIN_LABELS "/data/train-labels-idx1-ubyte"
-#define FILE_TEST_IMAGES "/data/t10k-images-idx3-ubyte"
+#define FILE_TRAIN_IMAGES "data/train-images-idx3-ubyte"
+#define FILE_TRAIN_LABELS "data/train-labels-idx1-ubyte"
+#define FILE_TEST_IMAGES "./data/t10k-images-idx3-ubyte"
 #define FILE_TEST_OUTPUT "Outputs/Pred_testset.txt"
 #define NUM_TRAIN 60000
 #define IMAGE_SIZE 784  // 28 x 28
@@ -198,6 +198,10 @@ int main(int argc, char* argv[]) {
         std::cout << "Training data stats..." << std::endl;
         std::cout << "Size of x_train, N =  " << x.n_cols << std::endl;
         std::cout << "Size of label_train = " << label.size() << std::endl;
+        std::cout << "x_train mean = " << arma::mean(arma::vectorise(x))
+                  << std::endl;
+        std::cout << "y_train mean = " << arma::mean(arma::vectorise(y))
+                  << std::endl;
 
         assert(x.n_cols == NUM_TRAIN && x.n_rows == IMAGE_SIZE);
         assert(label.size() == NUM_TRAIN);

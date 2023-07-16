@@ -6,3 +6,6 @@ testbin
 .DS_Store
 Outputs/*
 dep/*
+data/*
+
+main
