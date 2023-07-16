@@ -1,0 +1,8 @@
+*.o
+*.out
+obj/*
+.vscode
+testbin
+.DS_Store
+Outputs/*
+dep/*
