@@ -123,8 +123,8 @@ int main(int argc, char* argv[]) {
         case 1:  // Low lr, high iters
             reg = 1e-4;
             learning_rate = 0.0005;
-            num_epochs = 60;
-            batch_size = 800;
+            num_epochs = 80;
+            batch_size = 512;
             num_neuron = 100;
             run_seq = 1;
             debug = 1;

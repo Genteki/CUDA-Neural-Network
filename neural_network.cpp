@@ -448,7 +448,7 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
     printf("start training\n");
 
     for (int epoch = 0; epoch < epochs; ++epoch) {
-        // int num_batches = (N + batch_size - 1) / batch_size;
+        // std::cout << "epoch " << epoch << std::endl;
         for (int batch = 0; batch < num_batches; ++batch) {
             /*
              * Possible implementation:
@@ -496,6 +496,13 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
                                         MPI_SUM, MPI_COMM_WORLD));
             MPI_SAFE_CALL(MPI_Allreduce(h_db2, db2.memptr(), output_dim, MPI_FP,
                                         MPI_SUM, MPI_COMM_WORLD));
+            // std::cout << "dW1 device norm: " << l2norm(cache.dW1, o1, input_dim) << std::endl;
+            // std::cout << "dW1 host norm: " << arma::norm(dW1, 2) << std::endl;
+            // std::cout << "W1 norm: " << arma::norm(nn.W[0], 2) << std::endl;
+            // std::cout << "W1 dim: " << nn.W[0].n_cols << ", " << nn.W[0].n_rows
+            //           << std::endl;
+            // std::cout << "dW1 dim: " << dW1.n_cols << ", " << dW1.n_rows
+            //           << std::endl;
             nn.W[0] -= learning_rate * dW1;
             nn.W[1] -= learning_rate * dW2;
             nn.b[0] -= learning_rate * db1;
@@ -506,20 +513,20 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
             //                    POST-PROCESS OPTIONS //
             // +-*=+-*=+-*=+-*=+-*=+-*=+-*=+-*=+*-=+-*=+*-=+-*=+-*=+-*=+-*=+-*=
             // //
-            if (print_every <= 0) {
-                print_flag = batch == 0;
-            } else {
-                print_flag = iter % print_every == 0;
-            }
+            // if (print_every <= 0) {
+            //     print_flag = batch == 0;
+            // } else {
+            //     print_flag = iter % print_every == 0;
+            // }
 
-            if (debug && rank == 0 && print_flag) {
-                // TODO
-                // Copy data back to the CPU
+            // if (debug && rank == 0 && print_flag) {
+            //     // TODO
+            //     // Copy data back to the CPU
 
-                /* The following debug routine assumes that you have already
-                 updated the arma matrices in the NeuralNetwork nn.  */
-                write_diff_gpu_cpu(nn, iter, error_file);
-            }
+            //     /* The following debug routine assumes that you have already
+            //      updated the arma matrices in the NeuralNetwork nn.  */
+            //     write_diff_gpu_cpu(nn, iter, error_file);
+            // }
 
             iter++;
         }

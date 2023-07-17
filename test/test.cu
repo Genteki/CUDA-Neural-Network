@@ -10,9 +10,6 @@
 const int M = 200;
 const int N = 100;
 
-real random_real() {
-    return (real)(rand()) / (real)(rand());
-}
 void test_gpu_add();
 void test_l2norm();
 void test_sigmoid();
