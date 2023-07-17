@@ -28,5 +28,5 @@ make
 
 ## Credits
 
-* `starter-code` by [CME213 Final Project](https://ericdarve.github.io/cme213-spring-2021/) by Eric Darve.
+* `starter-code` from [CME213 Final Project](https://ericdarve.github.io/cme213-spring-2021/) by Eric Darve.
 * Dataset [MNIST](http://yann.lecun.com/exdb/mnist/) by Yann LeCun, Corinna Cortes, Christopher J.C. Burges.
