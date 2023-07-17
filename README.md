@@ -10,7 +10,7 @@ It's a 2-layer neural network using CUDA C++, identifying digits from hand-writt
 
 ## Before compilation
 
-- [ ] In `Makefile`, replace the `-arch=compute_80 -code=sm_80` with the version [matching the GPU](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) in `CUDFLAGS`.
+- [ ] In `Makefile`, replace the `-arch=compute_80 -code=sm_80` with the version [matching to GPU](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities) in `CUDFLAGS`.
 - [ ] In `Makefile`, replace the `CUDASAMPLES` with your cuda-samples include path.
 - [ ] Make a directory named `data/`, download [MNIST](http://yann.lecun.com/exdb/mnist/) dataset in the directory.
 
