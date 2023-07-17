@@ -424,9 +424,6 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
     int input_dim = nn.H[0];
     int o1 = nn.H[1];
     int output_dim = nn.H[2];
-    // real *X_batch, *y_batch;
-    // cudaMalloc((void**)X_batch, sizeof(real) * input_dim * batch_size);
-    // cudaMalloc((void**)y_batch, sizeof(real) * output_dim * batch_size);
     int num_batches = (N + batch_size - 1) / batch_size;
     real *d_X, *d_y;
     int samples_per_proc = ceil((float)N / (float)num_procs);
@@ -440,10 +437,6 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
     cudaMemcpy(d_y, y.colptr(col_start), (samples_this_proc * output_dim) * sizeof(real), cudaMemcpyHostToDevice);
 
     NNCache cache(input_dim, output_dim, o1, batch_size);
-    real* h_W1 = new real[o1 * input_dim]();
-    real* h_b1 = new real[o1 * 1]();
-    real* h_W2 = new real[output_dim * o1]();
-    real* h_b2 = new real[output_dim * 1]();
     real* h_dW1 = new real[o1 * input_dim]();
     real* h_db1 = new real[o1 * 1]();
     real* h_dW2 = new real[output_dim * o1]();
@@ -473,9 +466,6 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
             int this_batch_size = batch_col_end - batch_col_start;
             real *d_X_batch = d_X + batch_col_start * input_dim;
             real *d_y_batch = d_y + batch_col_start * output_dim;
-            // std::cout << "start col: " << batch_col_start 
-            //           << "batch_size: " << this_batch_size
-            //           << std::endl;
             // 1. copy cache to device
             cudaMemcpy(cache.W1, nn.W[0].memptr(), sizeof(real) * input_dim * o1, cudaMemcpyHostToDevice);
             cudaMemcpy(cache.W2, nn.W[1].memptr(), sizeof(real) * o1 * output_dim, cudaMemcpyHostToDevice);
@@ -506,36 +496,11 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
                                         MPI_SUM, MPI_COMM_WORLD));
             MPI_SAFE_CALL(MPI_Allreduce(h_db2, db2.memptr(), output_dim, MPI_FP,
                                         MPI_SUM, MPI_COMM_WORLD));
-            // std::cout << "start col: " << col_start << " "
-            //           << "end col: " << col_end << " " << std::endl;
-            // std::cout << "Host X y:"
-            //           << X.n_cols << " "
-            //           << y.n_cols << std::endl;
-            // std::cout << "Device X y:"
-            //           << l2norm(d_X, input_dim, this_batch_size) << " "
-            //           << l2norm(d_y, output_dim, this_batch_size) << std::endl;
-            // std::cout << "Device z:" 
-            //           << l2norm(cache.z1, o1, this_batch_size) << " "
-            //           << l2norm(cache.a1, o1, this_batch_size) << " "
-            //           << l2norm(cache.z2, output_dim, this_batch_size) << " "
-            //           << l2norm(cache.prediction, this_batch_size, output_dim)
-            //           << std::endl;
-            // std::cout << "Device b:" 
-            //           << l2norm(cache.b1, o1, 1) << " "
-            //           << l2norm(cache.b2, output_dim, 1) << " "
-            //           << std::endl;
-            // // std::cout << "Device dW:" << l2norm(cache.dW1, o1, input_dim) << " "
-            // //           << l2norm(cache.dW2, o1, output_dim) << std::endl;
-            // std::cout << "Device db:" << l2norm(cache.dz2, output_dim, this_batch_size) << " "
-            //           << l2norm(cache.db2, output_dim, 1) << std::endl;
-            // std::cout << "Host dW:" << arma::norm(dW2, 2) << arma::norm(db2, 2) << std::endl;
             nn.W[0] -= learning_rate * dW1;
             nn.W[1] -= learning_rate * dW2;
             nn.b[0] -= learning_rate * db1;
             nn.b[1] -= learning_rate * db2;
 
-            // std::cout << "host b: "<< arma::norm(nn.b[0], 2) << " " << arma::norm(nn.b[1], 2) << std::endl;
-            // return;
             // +-*=+-*=+-*=+-*=+-*=+-*=+-*=+-*=+*-=+-*=+*-=+-*=+-*=+-*=+-*=+-*=
             // //
             //                    POST-PROCESS OPTIONS //
@@ -567,10 +532,6 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
 
     // Free memory
     cudaFree(d_X); cudaFree(d_y);
-    delete[] h_W1;
-    delete[] h_b1;
-    delete[] h_W2;
-    delete[] h_b2;
     delete[] h_dW1;
     delete[] h_db1;
     delete[] h_dW2;
