@@ -477,10 +477,10 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
             //           << "batch_size: " << this_batch_size
             //           << std::endl;
             // 1. copy cache to device
-            cudaMemcpy(cache.W1, h_W1, sizeof(real) * input_dim * o1, cudaMemcpyHostToDevice);
-            cudaMemcpy(cache.W2, h_W2, sizeof(real) * o1 * output_dim, cudaMemcpyHostToDevice);
-            cudaMemcpy(cache.b1, h_b1, sizeof(real) * o1 * 1, cudaMemcpyHostToDevice);
-            cudaMemcpy(cache.b2, h_b2, sizeof(real) * output_dim * 1, cudaMemcpyHostToDevice);
+            cudaMemcpy(cache.W1, nn.W[0].memptr(), sizeof(real) * input_dim * o1, cudaMemcpyHostToDevice);
+            cudaMemcpy(cache.W2, nn.W[1].memptr(), sizeof(real) * o1 * output_dim, cudaMemcpyHostToDevice);
+            cudaMemcpy(cache.b1, nn.b[0].memptr(), sizeof(real) * o1 * 1, cudaMemcpyHostToDevice);
+            cudaMemcpy(cache.b2, nn.b[1].memptr(), sizeof(real) * output_dim * 1, cudaMemcpyHostToDevice);
             // 2. forward
             gpu_forward(nn, d_X_batch, cache, this_batch_size);
             // 3. zero gradient
@@ -524,8 +524,8 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
             //           << l2norm(cache.b1, o1, 1) << " "
             //           << l2norm(cache.b2, output_dim, 1) << " "
             //           << std::endl;
-            // std::cout << "Device dW:" << l2norm(cache.dW1, o1, input_dim) << " "
-            //           << l2norm(cache.dW2, o1, output_dim) << std::endl;
+            // // std::cout << "Device dW:" << l2norm(cache.dW1, o1, input_dim) << " "
+            // //           << l2norm(cache.dW2, o1, output_dim) << std::endl;
             // std::cout << "Device db:" << l2norm(cache.dz2, output_dim, this_batch_size) << " "
             //           << l2norm(cache.db2, output_dim, 1) << std::endl;
             // std::cout << "Host dW:" << arma::norm(dW2, 2) << arma::norm(db2, 2) << std::endl;
@@ -533,6 +533,8 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
             nn.W[1] -= learning_rate * dW2;
             nn.b[0] -= learning_rate * db1;
             nn.b[1] -= learning_rate * db2;
+
+            // std::cout << "host b: "<< arma::norm(nn.b[0], 2) << " " << arma::norm(nn.b[1], 2) << std::endl;
             // return;
             // +-*=+-*=+-*=+-*=+-*=+-*=+-*=+-*=+*-=+-*=+*-=+-*=+-*=+-*=+-*=+-*=
             // //
