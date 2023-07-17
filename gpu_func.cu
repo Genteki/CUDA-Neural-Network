@@ -28,7 +28,8 @@ int myGEMM(const real* __restrict__ A, const real* __restrict__ B,
     cudaDeviceSynchronize();
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
-        fprintf(stderr, "CUDA Error: %s\n", cudaGetErrorString(error));
+        fprintf(stderr, "CUDA Error: %s at %s:%d\n", cudaGetErrorString(error),
+                __FILE__, __LINE__);
         return -1;
     }
 
@@ -60,7 +61,7 @@ __global__ void gpu_sigmoid_kernel(const real* __restrict__ A,
     int idx = row + col * M;
     // sigmoid(x) = 1 / (1 + exp(-x))
     if (row < M && col < N) {
-        C[idx] = 1 / ( 1 + expf(A[idx]));
+        C[idx] = 1 / ( 1 + expf(-A[idx]));
     }
 }
 
@@ -89,7 +90,7 @@ __global__ void gpu_softmax_kernel(const real* __restrict__ A,
     if (col < N) {
         for (int row = 0; row < M; ++row) {
             int idx = row + col * M;
-            real exp_xi = A[idx];
+            real exp_xi = expf(A[idx]);
             exp_sum += exp_xi;
             C[idx] = exp_xi;
         }
@@ -126,7 +127,8 @@ int gpu_linear(const real* __restrict__ W, const real* __restrict__ x,
     cudaDeviceSynchronize();
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
-        fprintf(stderr, "CUDA Error: %s\n", cudaGetErrorString(error));
+        fprintf(stderr, "CUDA Error: %s at %s:%d\n", cudaGetErrorString(error),
+                __FILE__, __LINE__);
         return -1;
     }
     return 0;
@@ -231,7 +233,8 @@ int transpose(const real* __restrict__ A, real* __restrict__ B, const int& M, co
     cudaDeviceSynchronize();
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
-        fprintf(stderr, "CUDA Error: %s\n", cudaGetErrorString(error));
+        fprintf(stderr, "CUDA Error: %s at %s:%d\n", cudaGetErrorString(error),
+                __FILE__, __LINE__);
         return -1;
     }
 

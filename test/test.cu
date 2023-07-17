@@ -15,10 +15,14 @@ real random_real() {
 }
 void test_gpu_add();
 void test_l2norm();
+void test_sigmoid();
+void test_rowsum();
 
 int main() {
     test_gpu_add();
     test_l2norm();
+    test_sigmoid();
+    test_rowsum();
 }
 
 void test_gpu_add() {
@@ -89,5 +93,73 @@ void test_l2norm() {
         std::cout << "failure, error: " << host_norm << " " << device_norm << std::endl;
     } else {
         std::cout << "passed.\n";
+    }
+}
+
+void test_sigmoid() {
+    real h[M*N], hs[M*N];
+    real *d_0, *d_s;
+    std::random_device rd;
+    std::mt19937 eng(rd());
+    std::uniform_real_distribution<> distr(-1, 1);
+    std::cout << "test sigmoid: ";
+    for (int i = 0; i < M*N; ++i) {
+        h[i] = distr(eng);
+    }
+    cudaMalloc((void**)&d_0, sizeof(real)*M*N);
+    cudaMalloc((void**)&d_s, sizeof(real)*M*N);
+    cudaMemcpy(d_0, h, sizeof(real)*M*N, cudaMemcpyHostToDevice);
+    gpu_sigmoid(d_0, d_s, M, N);
+    cudaMemcpy(hs, d_s, sizeof(real)*M*N, cudaMemcpyDeviceToHost);
+    bool pass = true;
+    real error = 0.0f;
+    for (int i = 0; i < M*N; ++i) {
+        real sig = 1/ (exp(-h[i]) + 1);
+        error += abs(sig - hs[i]);
+        if (abs(sig - hs[i] >= 0.001)) {
+            pass = false;
+        }
+    }
+    if (pass) {
+        std::cout << "passed\n";
+    } else {
+        std::cout << "failed, error: " << error << "\n";
+    }
+}
+
+void test_rowsum() {
+    real h_arr[M* N], h_sum[M], h_sum_from_d[M];
+    real *d_arr, *d_sum;
+    std::random_device rd;
+    std::mt19937 eng(rd());
+    std::uniform_real_distribution<> distr(-1, 10);
+    std::cout << "test row sum: ";
+    for (int i = 0; i < M*N; ++i) {
+        h_arr[i] = distr(eng);
+    }
+    cudaMalloc((void **)&d_arr, M * N * sizeof(real));
+    cudaMalloc((void **)&d_sum, M * 1 * sizeof(real));
+    cudaMemcpy(d_arr, h_arr, sizeof(real) * M * N, cudaMemcpyHostToDevice);
+    memset(h_sum, 0, sizeof(real) * M);
+    for (int row = 0; row < M; ++row) {
+        for (int col = 0; col < N; ++col)
+            h_sum[row] += h_arr[row + col * M];
+    }
+    sum_row(d_arr, d_sum, M, N);
+    cudaMemcpy(h_sum_from_d, d_sum, sizeof(real) * M, cudaMemcpyDeviceToHost);
+
+    bool pass = true;
+    real error = 0.0f;
+    for (int i = 0; i < M; ++i) {
+        if (abs(h_sum[i] - h_sum_from_d[i]) >= 0.001) {
+            pass = false;
+            error += abs(h_sum - h_sum_from_d);
+            std::cout << "error in row " << i << ": ref " << h_sum[i] << " dev " << h_sum_from_d[i] << std::endl;
+        }
+    }
+    if (pass) {
+        std::cout << "passed\n";
+    } else {
+        std::cout << "failed, error: " << h_sum[0] << h_sum_from_d[0] << "\n";
     }
 }

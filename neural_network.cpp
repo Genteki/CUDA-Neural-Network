@@ -366,7 +366,7 @@ void gpu_backpropogation(NeuralNetwork& nn, real* __restrict__ X,
     myGEMM(cache.dz2, temp, cache.dW2, &f1, &reg_normalizer, output_dim, o1, batch_size);
     cudaFree(temp);
     // 3. b2: dC / db2 = dC/dz2 , but we do average(sum) here
-    sum_row(cache.dz2, cache.b2, output_dim, batch_size);
+    sum_row(cache.dz2, cache.db2, output_dim, batch_size);
     // 4. a1: dC / da1 = W2.T * dC / dz2
     cudaMalloc((void**)&temp, sizeof(real) * output_dim * o1);
     transpose(cache.W2, temp, output_dim, o1);
@@ -387,7 +387,7 @@ void gpu_backpropogation(NeuralNetwork& nn, real* __restrict__ X,
            input_dim, batch_size);
     cudaFree(temp);
     // 3. b1
-    sum_row(cache.dz1, cache.b1, o1, batch_size);
+    sum_row(cache.dz1, cache.db1, o1, batch_size);
 }
 
 void zero_gradient(NNCache& cache) {
@@ -409,7 +409,6 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
     int rank, num_procs;
     MPI_SAFE_CALL(MPI_Comm_size(MPI_COMM_WORLD, &num_procs));
     MPI_SAFE_CALL(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
-
     int N = (rank == 0) ? X.n_cols : 0;
     MPI_SAFE_CALL(MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD));
 
@@ -434,6 +433,7 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
     int col_start = rank * samples_per_proc;
     int col_end = (rank == (num_procs-1)) ?  N : (rank + 1) * samples_per_proc;
     int samples_this_proc = col_end - col_start;
+
     cudaMalloc((void**)&d_X, (samples_this_proc * input_dim) * sizeof(real));
     cudaMalloc((void**)&d_y, (samples_this_proc * output_dim) * sizeof(real));
     cudaMemcpy(d_X, X.colptr(col_start), (samples_this_proc * input_dim) * sizeof(real), cudaMemcpyHostToDevice);
@@ -469,10 +469,13 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
              */
 
             int batch_col_start = batch * batch_size;
-            int batch_col_end = std::min(col_start + batch_size, samples_this_proc);
+            int batch_col_end = std::min(batch_col_start + batch_size, samples_this_proc);
             int this_batch_size = batch_col_end - batch_col_start;
             real *d_X_batch = d_X + batch_col_start * input_dim;
             real *d_y_batch = d_y + batch_col_start * output_dim;
+            // std::cout << "start col: " << batch_col_start 
+            //           << "batch_size: " << this_batch_size
+            //           << std::endl;
             // 1. copy cache to device
             cudaMemcpy(cache.W1, h_W1, sizeof(real) * input_dim * o1, cudaMemcpyHostToDevice);
             cudaMemcpy(cache.W2, h_W2, sizeof(real) * o1 * output_dim, cudaMemcpyHostToDevice);
@@ -503,28 +506,34 @@ void parallel_train(NeuralNetwork& nn, const arma::Mat<real>& X,
                                         MPI_SUM, MPI_COMM_WORLD));
             MPI_SAFE_CALL(MPI_Allreduce(h_db2, db2.memptr(), output_dim, MPI_FP,
                                         MPI_SUM, MPI_COMM_WORLD));
-            std::cout << "start col: " << col_start << " "
-                      << "end col: " << col_end << " " << std::endl;
-            std::cout << "Host X y:"
-                      << X.n_cols << " "
-                      << y.n_cols << std::endl;
-            std::cout << "Device X y:"
-                      << l2norm(d_X, input_dim, this_batch_size) << " "
-                      << l2norm(d_y, output_dim, this_batch_size) << std::endl;
-            std::cout << "Device z:" 
-                      << l2norm(cache.z1, o1, this_batch_size) << " "
-                      << l2norm(cache.a1, o1, this_batch_size) << " "
-                      << l2norm(cache.z2, output_dim, this_batch_size) << " "
-                      << l2norm(cache.prediction, this_batch_size, output_dim)
-                      << std::endl;
-            std::cout << "Device dW:" << l2norm(cache.dW1, o1, input_dim) << " "
-                      << l2norm(cache.dW2, o1, output_dim) << std::endl;
-            std::cout << "Host dW:" << arma::norm(dW2, 2) << arma::norm(db2, 2) << std::endl;
+            // std::cout << "start col: " << col_start << " "
+            //           << "end col: " << col_end << " " << std::endl;
+            // std::cout << "Host X y:"
+            //           << X.n_cols << " "
+            //           << y.n_cols << std::endl;
+            // std::cout << "Device X y:"
+            //           << l2norm(d_X, input_dim, this_batch_size) << " "
+            //           << l2norm(d_y, output_dim, this_batch_size) << std::endl;
+            // std::cout << "Device z:" 
+            //           << l2norm(cache.z1, o1, this_batch_size) << " "
+            //           << l2norm(cache.a1, o1, this_batch_size) << " "
+            //           << l2norm(cache.z2, output_dim, this_batch_size) << " "
+            //           << l2norm(cache.prediction, this_batch_size, output_dim)
+            //           << std::endl;
+            // std::cout << "Device b:" 
+            //           << l2norm(cache.b1, o1, 1) << " "
+            //           << l2norm(cache.b2, output_dim, 1) << " "
+            //           << std::endl;
+            // std::cout << "Device dW:" << l2norm(cache.dW1, o1, input_dim) << " "
+            //           << l2norm(cache.dW2, o1, output_dim) << std::endl;
+            // std::cout << "Device db:" << l2norm(cache.dz2, output_dim, this_batch_size) << " "
+            //           << l2norm(cache.db2, output_dim, 1) << std::endl;
+            // std::cout << "Host dW:" << arma::norm(dW2, 2) << arma::norm(db2, 2) << std::endl;
             nn.W[0] -= learning_rate * dW1;
             nn.W[1] -= learning_rate * dW2;
             nn.b[0] -= learning_rate * db1;
             nn.b[1] -= learning_rate * db2;
-            return;
+            // return;
             // +-*=+-*=+-*=+-*=+-*=+-*=+-*=+-*=+*-=+-*=+*-=+-*=+-*=+-*=+-*=+-*=
             // //
             //                    POST-PROCESS OPTIONS //
